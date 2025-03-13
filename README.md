@@ -22,3 +22,4 @@ If you are developing a production application, we recommend using TypeScript an
     npm run dev
     ```
 3. Сервис доступен по адресу http://localhost:5173/
+
