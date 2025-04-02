@@ -1,71 +1,72 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import {
+  Container,
+  Box,
+  Tabs,
+  Tab,
+  Typography,
+  AppBar,
+  Toolbar,
+} from "@mui/material";
+import TrainerClientSection from "./components/TrainerClientSection";
+import TrainingSection from "./components/TrainingSection";
+import ExercisesSection from "./components/ExercisesSection";
+import HealthMetricsSection from "./components/HealthMetricsSection";
+import DiarySection from "./components/DiarySection";
+
+function TabPanel({ children, value, index }) {
+  return (
+    <div hidden={value !== index} style={{ width: "100%" }}>
+      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
+    </div>
+  );
+}
 
 function App() {
-  const [tables, setTables] = useState([]);
-  const [selectedTable, setSelectedTable] = useState(null);
-  const [tableInfo, setTableInfo] = useState(null);
-  const [query, setQuery] = useState("");
-  const [queryResult, setQueryResult] = useState([]);
+  const [activeTab, setActiveTab] = useState(0);
 
-  useEffect(() => {
-    fetch("http://localhost:8000/tables")
-      .then((res) => res.json())
-      .then((data) => setTables(data.tables))
-      .catch((err) => console.error("Ошибка получения таблиц:", err));
-  }, []);
-
-  const fetchTableInfo = (tableName) => {
-    fetch(`http://localhost:8000/tables/${tableName}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setSelectedTable(tableName);
-        setTableInfo(data);
-      })
-      .catch((err) => console.error("Ошибка получения информации о таблице:", err));
-  };
-
-  const executeQuery = () => {
-    fetch("http://localhost:8000/query", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query }),
-    })
-      .then((res) => res.json())
-      .then((data) => setQueryResult(data.result))
-      .catch((err) => console.error("Ошибка выполнения запроса:", err));
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
   };
 
   return (
-    <div style={{ padding: "20px", fontFamily: "Arial" }}>
-      <section>
-        <h2>Список таблиц</h2>
-        <ul>
-          {tables.map((table, index) => (
-            <li key={index} onClick={() => fetchTableInfo(table)} style={{ cursor: "pointer", marginBottom: "5px" }}>
-              {table}
-            </li>
-          ))}
-        </ul>
-      </section>
+    <Box sx={{ flexGrow: 1 }}>
+      <AppBar position="static">
+        <Toolbar>
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            Фитнес-приложение
+          </Typography>
+        </Toolbar>
+      </AppBar>
 
-      {selectedTable && tableInfo && (
-        <section>
-          <h2>Информация о таблице: {selectedTable}</h2>
-          <pre>{JSON.stringify(tableInfo.columns, null, 2)}</pre>
-        </section>
-      )}
+      <Container maxWidth="xl">
+        <Box sx={{ borderBottom: 1, borderColor: "divider", mt: 2 }}>
+          <Tabs value={activeTab} onChange={handleTabChange}>
+            <Tab label="Тренеры и клиенты" />
+            <Tab label="Тренировки" />
+            <Tab label="Упражнения" />
+            <Tab label="Метрики здоровья" />
+            <Tab label="Дневники" />
+          </Tabs>
+        </Box>
 
-      <section>
-        <h2>Выполнить SQL-запрос</h2>
-        <textarea value={query} onChange={(e) => setQuery(e.target.value)} rows="4" cols="50" placeholder="Введите SQL-запрос..." />
-        <br />
-        <button onClick={executeQuery}>Выполнить запрос</button>
-        <div>
-          <h3>Результат:</h3>
-          <pre>{JSON.stringify(queryResult, null, 2)}</pre>
-        </div>
-      </section>
-    </div>
+        <TabPanel value={activeTab} index={0}>
+          <TrainerClientSection />
+        </TabPanel>
+        <TabPanel value={activeTab} index={1}>
+          <TrainingSection />
+        </TabPanel>
+        <TabPanel value={activeTab} index={2}>
+          <ExercisesSection />
+        </TabPanel>
+        <TabPanel value={activeTab} index={3}>
+          <HealthMetricsSection />
+        </TabPanel>
+        <TabPanel value={activeTab} index={4}>
+          <DiarySection />
+        </TabPanel>
+      </Container>
+    </Box>
   );
 }
 

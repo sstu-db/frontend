@@ -1,0 +1,2 @@
+SELECT * FROM вода WHERE объем > 700 ORDER BY объем DESC
+SELECT * FROM чувство
