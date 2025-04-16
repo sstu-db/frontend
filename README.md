@@ -1,24 +1,52 @@
-# Frontend for an application for creating a fitness training plan
+# Фитнес-приложение
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Веб-приложение для управления тренировками, упражнениями и метриками здоровья.
 
-Currently, two official plugins are available:
+## Требования
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Node.js (версия 14 или выше)
+- npm (обычно устанавливается вместе с Node.js)
 
-## Expanding the ESLint configuration
+## Установка
 
-If you are developing a production application, we recommend using TypeScript and enable type-aware lint rules. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+1. Клонируйте репозиторий:
+```bash
+git clone <url-репозитория>
+cd <папка-проекта>
+```
 
-## Установка и запуск
+2. Установите зависимости:
+```bash
+npm install
+```
 
-1. Убедитесь, что у вас установлен [Node.js](https://nodejs.org/)
-2. Пропишите в консоли:
-    ```shell
-    git clone https://github.com/sstu-db/frontend.git
-    cd frontend
-    npm install
-    npm run dev
-    ```
-3. Сервис доступен по адресу http://localhost:5173/
+## Запуск
+
+Для запуска приложения в режиме разработки выполните:
+```bash
+npm run dev
+```
+
+Приложение будет доступно по адресу: http://localhost:5173
+
+## Структура проекта
+
+- `src/components/` - компоненты React
+  - `ExerciseList.jsx` - компонент для отображения списка упражнений
+  - `WorkoutList.jsx` - компонент для отображения списка тренировок
+  - `TrainingSection.jsx` - раздел тренировок
+  - `ExercisesSection.jsx` - раздел упражнений
+  - `HealthMetricsSection.jsx` - раздел метрик здоровья
+  - `DiarySection.jsx` - раздел дневников
+  - `TrainerClientSection.jsx` - раздел тренеров и клиентов
+- `src/App.jsx` - главный компонент приложения
+
+## API
+
+Приложение использует API, доступное по адресу: http://localhost:8000
+
+## Технологии
+
+- React
+- Material-UI
+- Vite

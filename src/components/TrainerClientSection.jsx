@@ -27,8 +27,8 @@ const TrainerClientSection = () => {
       const data = await response.json();
       console.log('API Response:', data);
       
-      // Извлекаем массив тренеров из объекта ответа
-      const trainers = data.trainers || [];
+      // Extract trainers from the response data
+      const trainers = data.data || [];
       console.log('Processed trainers:', trainers);
       setClientTrainers(trainers);
     } catch (error) {
@@ -44,8 +44,8 @@ const TrainerClientSection = () => {
       const data = await response.json();
       console.log('API Response for clients:', data);
       
-      // Извлекаем массив клиентов из объекта ответа
-      const clients = data.clients || [];
+      // Extract clients from the response data
+      const clients = data.data || [];
       console.log('Processed clients:', clients);
       setTrainerClients(clients);
     } catch (error) {
@@ -82,17 +82,17 @@ const TrainerClientSection = () => {
                     <div key={index}>
                       <ListItem>
                         <ListItemText
-                          primary={`${trainer.фамилия} ${trainer.имя} ${trainer.отчество}`}
+                          primary={`${trainer.user?.фамилия || ''} ${trainer.user?.имя || ''} ${trainer.user?.отчество || ''}`}
                           secondary={
                             <>
                               <Typography component="span" variant="body2">
-                                Дата рождения: {new Date(trainer.дата_рождения).toLocaleDateString('ru-RU')}
+                                Дата рождения: {trainer.user?.дата_рождения ? new Date(trainer.user.дата_рождения).toLocaleDateString('ru-RU') : 'Не указана'}
                               </Typography>
                               <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                {(trainer.специальности || []).map((specialty, sIndex) => (
+                                {(trainer.specialties || []).map((specialty, sIndex) => (
                                   <Chip
                                     key={sIndex}
-                                    label={specialty}
+                                    label={specialty.название}
                                     size="small"
                                     color="primary"
                                     variant="outlined"
@@ -141,19 +141,19 @@ const TrainerClientSection = () => {
                     <div key={index}>
                       <ListItem>
                         <ListItemText
-                          primary={`${client.фамилия} ${client.имя} ${client.отчество}`}
+                          primary={`${client.user?.фамилия || ''} ${client.user?.имя || ''} ${client.user?.отчество || ''}`}
                           secondary={
                             <>
                               <Typography component="span" variant="body2">
-                                Дата рождения: {new Date(client.дата_рождения).toLocaleDateString('ru-RU')}
+                                Дата рождения: {client.user?.дата_рождения ? new Date(client.user.дата_рождения).toLocaleDateString('ru-RU') : 'Не указана'}
                                 <br />
-                                Уровень: {client.уровень_подготовки}
+                                Уровень подготовки: {client.preparation_level?.название || 'Не указан'}
                               </Typography>
                               <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                {(client.цели_тренировок || []).map((goal, gIndex) => (
+                                {(client.training_goals || []).map((goal, gIndex) => (
                                   <Chip
                                     key={gIndex}
-                                    label={goal}
+                                    label={goal.название}
                                     size="small"
                                     color="secondary"
                                     variant="outlined"

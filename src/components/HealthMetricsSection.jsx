@@ -24,7 +24,7 @@ const HealthMetricsSection = () => {
     try {
       console.log('Fetching health metrics for user:', userId);
       
-      // Формируем URL с параметрами дат
+      // Form URLs with date parameters
       let stepsUrl = `http://localhost:8000/steps?user_id=${userId}`;
       let waterUrl = `http://localhost:8000/water?user_id=${userId}`;
       
@@ -37,18 +37,18 @@ const HealthMetricsSection = () => {
         waterUrl += `&end_date=${endDate}`;
       }
       
-      // Получаем шаги
+      // Get steps data
       const stepsResponse = await fetch(stepsUrl);
       const stepsData = await stepsResponse.json();
       console.log('Steps API Response:', stepsData);
       
-      // Получаем потребление воды
+      // Get water consumption data
       const waterResponse = await fetch(waterUrl);
       const waterData = await waterResponse.json();
       console.log('Water API Response:', waterData);
       
-      setSteps(stepsData.steps || []);
-      setWater(waterData.water || []);
+      setSteps(stepsData.data || []);
+      setWater(waterData.data || []);
     } catch (error) {
       console.error('Error fetching health metrics:', error);
       setSteps([]);

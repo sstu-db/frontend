@@ -31,8 +31,8 @@ const ExercisesSection = () => {
       const data = await response.json();
       console.log('Exercises API Response:', data);
       
-      if (data.exercises && Array.isArray(data.exercises)) {
-        setExercises(data.exercises);
+      if (data.data && Array.isArray(data.data)) {
+        setExercises(data.data);
       } else {
         setExercises([]);
       }

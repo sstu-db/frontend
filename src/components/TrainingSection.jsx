@@ -11,7 +11,7 @@ import {
 } from '@mui/material';
 import WorkoutList from './WorkoutList';
 
-// Функция для форматирования даты и времени
+// Function for formatting date and time
 const formatDateTime = (dateTimeStr) => {
   if (!dateTimeStr) return 'Не указано';
   try {
@@ -29,7 +29,7 @@ const formatDateTime = (dateTimeStr) => {
   }
 };
 
-// Функция для определения формата тренировки
+// Function for determining workout format
 const getWorkoutFormat = (isOnline) => {
   return isOnline ? 'Онлайн' : 'Оффлайн';
 };
@@ -56,8 +56,8 @@ const TrainingSection = () => {
       const data = await response.json();
       console.log('Training Plans API Response:', data);
       
-      if (data.training_plans && Array.isArray(data.training_plans)) {
-        setTrainingPlans(data.training_plans);
+      if (data.data && Array.isArray(data.data)) {
+        setTrainingPlans(data.data);
       } else {
         setTrainingPlans([]);
       }
@@ -83,8 +83,8 @@ const TrainingSection = () => {
       const data = await response.json();
       console.log('Workouts API Response:', data);
       
-      if (data.workouts && Array.isArray(data.workouts)) {
-        setWorkouts(data.workouts);
+      if (data.data && Array.isArray(data.data)) {
+        setWorkouts(data.data);
       } else {
         setWorkouts([]);
       }
@@ -150,12 +150,12 @@ const TrainingSection = () => {
                     <Typography variant="body2" color="text.secondary" paragraph>
                       {plan.описание || ''}
                     </Typography>
-                    {plan.тренировки && plan.тренировки.length > 0 && (
+                    {plan.workouts && plan.workouts.length > 0 && (
                       <Box sx={{ mt: 2 }}>
                         <Typography variant="subtitle1" gutterBottom>
                           Тренировки:
                         </Typography>
-                        <WorkoutList workouts={plan.тренировки} />
+                        <WorkoutList workouts={plan.workouts} />
                       </Box>
                     )}
                   </Paper>

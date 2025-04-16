@@ -62,33 +62,13 @@ const WorkoutList = ({ workouts }) => {
                       color="secondary"
                       variant="outlined"
                     />
-                    <Chip
-                      label={`Вид: ${workout.вид_тренировки || 'Не указан'}`}
-                      size="small"
-                      color="info"
-                      variant="outlined"
-                    />
                   </Box>
-                  {workout.тренировка_и_упражнение && workout.тренировка_и_упражнение.length > 0 && (
+                  {workout.exercises && workout.exercises.length > 0 && (
                     <Box sx={{ mt: 2 }}>
                       <Typography variant="subtitle2" gutterBottom>
                         Упражнения:
                       </Typography>
-                      {workout.тренировка_и_упражнение.map((exerciseData, eIndex) => (
-                        <Box key={eIndex}>
-                          {eIndex > 0 && <Divider sx={{ my: 2 }} />}
-                          <Box sx={{ mb: 1 }}>
-                            <Typography variant="body2" color="text.secondary">
-                              Подходы: {exerciseData.колво_подходов_выполнено}/{exerciseData.колво_подходов}
-                              {' | '}
-                              Повторения: {exerciseData.колво_повторений_выполнено}/{exerciseData.колво_повторений}
-                              {' | '}
-                              Порядок: {exerciseData.номер_в_очереди}
-                            </Typography>
-                          </Box>
-                          <ExerciseList exercises={[exerciseData.упражнение]} />
-                        </Box>
-                      ))}
+                      <ExerciseList exercises={workout.exercises} />
                     </Box>
                   )}
                 </>
