@@ -6,8 +6,10 @@ import {
   CircularProgress,
   Alert,
   Stack,
+  IconButton,
+  Paper,
 } from '@mui/material';
-import { Add as AddIcon } from '@mui/icons-material';
+import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { trainingService } from '../services/trainingService';
 import CreateWorkoutDialog from './CreateWorkoutDialog';
 import CreateTrainingPlanDialog from './CreateTrainingPlanDialog';
@@ -109,11 +111,22 @@ const TrainingSection = () => {
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {trainingPlans.length > 0 ? (
           trainingPlans.map((plan) => (
-            <Box key={plan.id} sx={{ mb: 2 }}>
-              <Typography variant="h6">{plan.название}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                {plan.описание}
-              </Typography>
+            <Paper key={plan.id} sx={{ p: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <Box>
+                  <Typography variant="h6">{plan.название}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {plan.описание}
+                  </Typography>
+                </Box>
+                <IconButton
+                  color="error"
+                  onClick={() => handleDeletePlan(plan.id)}
+                  size="small"
+                >
+                  <DeleteIcon />
+                </IconButton>
+              </Box>
               {plan.workouts && plan.workouts.length > 0 && (
                 <Box sx={{ mt: 2 }}>
                   <Typography variant="subtitle1" gutterBottom>
@@ -122,7 +135,7 @@ const TrainingSection = () => {
                   <WorkoutList workouts={plan.workouts} showExercises={true} />
                 </Box>
               )}
-            </Box>
+            </Paper>
           ))
         ) : (
           <Typography color="text.secondary">
