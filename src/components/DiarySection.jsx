@@ -22,23 +22,26 @@ import {
   Select,
   MenuItem,
   Alert,
+  OutlinedInput,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
-
-const API_URL = 'http://localhost:8000';
+import { API_URL } from '../config';
+import { diaryService } from '../services/diaryService';
+import { format } from 'date-fns';
+import { ru } from 'date-fns/locale';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 
 const DiarySection = () => {
-  const [userId, setUserId] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(new Date());
+  const [endDate, setEndDate] = useState(new Date());
   const [diaries, setDiaries] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedDiary, setSelectedDiary] = useState(null);
-  const [diaryForm, setDiaryForm] = useState({
+  const [newDiary, setNewDiary] = useState({
+    дата: new Date(),
     запись: '',
-    дата: new Date().toISOString().split('T')[0],
     feelings: [],
     feeling_reasons: [],
   });
@@ -48,62 +51,55 @@ const DiarySection = () => {
   const [feelingReasons, setFeelingReasons] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const fetchDiaries = async () => {
-    try {
-      console.log('Fetching diaries for user:', userId);
-      let url = `http://localhost:8000/diaries?user_id=${userId}`;
-      
-      if (startDate) {
-        url += `&start_date=${startDate}`;
-      }
-      if (endDate) {
-        url += `&end_date=${endDate}`;
-      }
+  useEffect(() => {
+    fetchDiaryData();
+    fetchFeelingsAndReasons();
+  }, [startDate, endDate]);
 
-      const response = await fetch(url);
-      const data = await response.json();
-      console.log('Diaries API Response:', data);
-      
-      if (data.data && Array.isArray(data.data)) {
-        setDiaries(data.data);
-      } else {
-        setDiaries([]);
-      }
+  const fetchDiaryData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const formattedStartDate = format(startDate, 'yyyy-MM-dd');
+      const formattedEndDate = format(endDate, 'yyyy-MM-dd');
+      const data = await diaryService.getMyDiariesByDates(formattedStartDate, formattedEndDate);
+      setDiaries(data);
     } catch (error) {
-      console.error('Error fetching diaries:', error);
-      setDiaries([]);
+      console.error('Error fetching diary data:', error);
+      setError('Ошибка при загрузке дневника');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return 'Не указана';
+  const fetchFeelingsAndReasons = async () => {
     try {
-      const date = new Date(dateStr);
-      return date.toLocaleDateString('ru-RU', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
+      const [feelingsData, reasonsData] = await Promise.all([
+        diaryService.getFeelings(),
+        diaryService.getFeelingReasons()
+      ]);
+      setFeelings(feelingsData);
+      setFeelingReasons(reasonsData);
     } catch (error) {
-      console.error('Error formatting date:', error);
-      return dateStr;
+      console.error('Error fetching feelings and reasons:', error);
+      setError('Ошибка при загрузке чувств и причин');
     }
   };
 
   const handleOpenDialog = (diary = null) => {
     if (diary) {
       setSelectedDiary(diary);
-      setDiaryForm({
+      setNewDiary({
+        дата: new Date(diary.дата),
         запись: diary.запись || '',
-        дата: diary.дата || new Date().toISOString().split('T')[0],
         feelings: diary.feelings?.map(f => f.id) || [],
         feeling_reasons: diary.feeling_reasons?.map(r => r.id) || [],
       });
     } else {
       setSelectedDiary(null);
-      setDiaryForm({
+      setNewDiary({
+        дата: new Date(),
         запись: '',
-        дата: new Date().toISOString().split('T')[0],
         feelings: [],
         feeling_reasons: [],
       });
@@ -114,9 +110,9 @@ const DiarySection = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setSelectedDiary(null);
-    setDiaryForm({
+    setNewDiary({
+      дата: new Date(),
       запись: '',
-      дата: new Date().toISOString().split('T')[0],
       feelings: [],
       feeling_reasons: [],
     });
@@ -126,31 +122,20 @@ const DiarySection = () => {
   const handleSubmit = async () => {
     try {
       setError('');
-      const url = selectedDiary 
-        ? `${API_URL}/diaries/${selectedDiary.id}`
-        : `${API_URL}/diaries`;
+      const diaryData = {
+        ...newDiary,
+        дата: format(newDiary.дата, 'yyyy-MM-dd')
+      };
       
-      const method = selectedDiary ? 'PUT' : 'POST';
-      
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...diaryForm,
-          пользователь_id: parseInt(userId),
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to save diary');
+      if (selectedDiary) {
+        await diaryService.updateDiary(selectedDiary.id, diaryData);
+      } else {
+        await diaryService.createDiary(diaryData);
       }
 
       setSuccess(selectedDiary ? 'Дневник обновлен' : 'Дневник создан');
       handleCloseDialog();
-      fetchDiaries();
+      fetchDiaryData();
     } catch (error) {
       setError(error.message);
     }
@@ -162,49 +147,13 @@ const DiarySection = () => {
     }
 
     try {
-      const response = await fetch(`${API_URL}/diaries/${diaryId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete diary');
-      }
-
+      await diaryService.deleteDiary(diaryId);
       setSuccess('Дневник удален');
-      fetchDiaries();
+      fetchDiaryData();
     } catch (error) {
       setError(error.message);
     }
   };
-
-  useEffect(() => {
-    const fetchFeelingsAndReasons = async () => {
-      try {
-        setLoading(true);
-        const [feelingsResponse, reasonsResponse] = await Promise.all([
-          fetch(`${API_URL}/feelings`),
-          fetch(`${API_URL}/feeling-reasons`)
-        ]);
-
-        if (!feelingsResponse.ok || !reasonsResponse.ok) {
-          throw new Error('Failed to fetch feelings or reasons');
-        }
-
-        const feelingsData = await feelingsResponse.json();
-        const reasonsData = await reasonsResponse.json();
-
-        setFeelings(feelingsData);
-        setFeelingReasons(reasonsData);
-      } catch (error) {
-        console.error('Error fetching feelings and reasons:', error);
-        setError('Не удалось загрузить список чувств и причин');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchFeelingsAndReasons();
-  }, []);
 
   return (
     <Box sx={{ p: 3 }}>
@@ -231,43 +180,31 @@ const DiarySection = () => {
                   variant="contained"
                   startIcon={<AddIcon />}
                   onClick={() => handleOpenDialog()}
-                  disabled={!userId}
                 >
                   Новый дневник
                 </Button>
               </Box>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={4}>
-                  <TextField
-                    label="ID пользователя"
-                    value={userId}
-                    onChange={(e) => setUserId(e.target.value)}
-                    type="number"
-                    fullWidth
-                  />
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <TextField
+                <Grid item xs={12} sm={6}>
+                  <DatePicker
                     label="Начальная дата"
-                    type="date"
                     value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    fullWidth
-                    InputLabelProps={{ shrink: true }}
+                    onChange={(newValue) => setStartDate(newValue)}
+                    format="dd.MM.yyyy"
+                    slotProps={{ textField: { fullWidth: true } }}
                   />
                 </Grid>
-                <Grid item xs={12} sm={4}>
-                  <TextField
+                <Grid item xs={12} sm={6}>
+                  <DatePicker
                     label="Конечная дата"
-                    type="date"
                     value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    fullWidth
-                    InputLabelProps={{ shrink: true }}
+                    onChange={(newValue) => setEndDate(newValue)}
+                    format="dd.MM.yyyy"
+                    slotProps={{ textField: { fullWidth: true } }}
                   />
                 </Grid>
               </Grid>
-              <Button variant="contained" onClick={fetchDiaries} sx={{ mt: 2 }}>
+              <Button variant="contained" onClick={fetchDiaryData} sx={{ mt: 2 }}>
                 Найти дневники
               </Button>
             </CardContent>
@@ -281,7 +218,9 @@ const DiarySection = () => {
                 Дневники
               </Typography>
               <List>
-                {diaries && diaries.length > 0 ? (
+                {loading ? (
+                  <Typography>Загрузка...</Typography>
+                ) : diaries && diaries.length > 0 ? (
                   diaries.map((diary, index) => (
                     <ListItem
                       key={index}
@@ -307,7 +246,7 @@ const DiarySection = () => {
                     >
                       <Box sx={{ width: '100%' }}>
                         <ListItemText 
-                          primary={formatDate(diary.дата)}
+                          primary={format(new Date(diary.дата), 'd MMMM yyyy', { locale: ru })}
                           secondary={
                             <>
                               <Typography component="span" variant="body2">
@@ -381,42 +320,43 @@ const DiarySection = () => {
         </Grid>
       </Grid>
 
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>
           {selectedDiary ? 'Редактировать дневник' : 'Новый дневник'}
         </DialogTitle>
         <DialogContent>
-          <Box sx={{ pt: 2 }}>
-            <TextField
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+            <DatePicker
               label="Дата"
-              type="date"
-              value={diaryForm.дата}
-              onChange={(e) => setDiaryForm({ ...diaryForm, дата: e.target.value })}
-              fullWidth
-              sx={{ mb: 2 }}
-              InputLabelProps={{ shrink: true }}
+              value={newDiary.дата}
+              onChange={(newValue) => setNewDiary({ ...newDiary, дата: newValue })}
+              format="dd.MM.yyyy"
+              slotProps={{ textField: { fullWidth: true } }}
             />
             <TextField
-              label="Запись"
+              label="Текст записи"
               multiline
               rows={4}
-              value={diaryForm.запись}
-              onChange={(e) => setDiaryForm({ ...diaryForm, запись: e.target.value })}
+              value={newDiary.запись}
+              onChange={(e) => setNewDiary({ ...newDiary, запись: e.target.value })}
               fullWidth
-              sx={{ mb: 2 }}
             />
-            <FormControl fullWidth sx={{ mb: 2 }}>
+            <FormControl fullWidth>
               <InputLabel>Чувства</InputLabel>
               <Select
                 multiple
-                value={diaryForm.feelings}
-                onChange={(e) => setDiaryForm({ ...diaryForm, feelings: e.target.value })}
+                value={newDiary.feelings}
+                onChange={(e) => setNewDiary({ ...newDiary, feelings: e.target.value })}
+                input={<OutlinedInput label="Чувства" />}
                 renderValue={(selected) => (
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {selected.map((value) => {
-                      const feeling = feelings.find(f => f.id === value);
-                      return <Chip key={value} label={feeling?.название || value} />;
-                    })}
+                    {selected.map((value) => (
+                      <Chip
+                        key={value}
+                        label={feelings.find(f => f.id === value)?.название}
+                        size="small"
+                      />
+                    ))}
                   </Box>
                 )}
               >
@@ -431,14 +371,18 @@ const DiarySection = () => {
               <InputLabel>Причины чувств</InputLabel>
               <Select
                 multiple
-                value={diaryForm.feeling_reasons}
-                onChange={(e) => setDiaryForm({ ...diaryForm, feeling_reasons: e.target.value })}
+                value={newDiary.feeling_reasons}
+                onChange={(e) => setNewDiary({ ...newDiary, feeling_reasons: e.target.value })}
+                input={<OutlinedInput label="Причины чувств" />}
                 renderValue={(selected) => (
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {selected.map((value) => {
-                      const reason = feelingReasons.find(r => r.id === value);
-                      return <Chip key={value} label={reason?.название || value} />;
-                    })}
+                    {selected.map((value) => (
+                      <Chip
+                        key={value}
+                        label={feelingReasons.find(r => r.id === value)?.название}
+                        size="small"
+                      />
+                    ))}
                   </Box>
                 )}
               >

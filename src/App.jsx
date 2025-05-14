@@ -1,72 +1,121 @@
-import { useState } from "react";
-import {
-  Container,
-  Box,
-  Tabs,
-  Tab,
-  Typography,
-  AppBar,
-  Toolbar,
-} from "@mui/material";
-import TrainerClientSection from "./components/TrainerClientSection";
-import TrainingSection from "./components/TrainingSection";
-import ExercisesSection from "./components/ExercisesSection";
-import HealthMetricsSection from "./components/HealthMetricsSection";
-import DiarySection from "./components/DiarySection";
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { ru } from 'date-fns/locale';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import { Box } from '@mui/material';
 
-function TabPanel({ children, value, index }) {
-  return (
-    <div hidden={value !== index} style={{ width: "100%" }}>
-      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
-    </div>
-  );
-}
+import LoginForm from './components/auth/LoginForm';
+import RegisterForm from './components/auth/RegisterForm';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import Navigation from './components/Navigation';
+import TrainingSection from './components/TrainingSection';
+import ExercisesSection from './components/ExercisesSection';
+import HealthMetricsSection from './components/HealthMetricsSection';
+import DiarySection from './components/DiarySection';
+import TrainersAndClients from './pages/TrainersAndClients';
+
+const theme = createTheme({
+  palette: {
+    mode: 'light',
+    primary: {
+      main: '#1976d2',
+    },
+    secondary: {
+      main: '#dc004e',
+    },
+  },
+});
+
+const ProtectedLayout = ({ children }) => (
+  <Box>
+    <Navigation />
+    <Box sx={{ p: 3 }}>
+      {children}
+    </Box>
+  </Box>
+);
 
 function App() {
-  const [activeTab, setActiveTab] = useState(0);
-
-  const handleTabChange = (event, newValue) => {
-    setActiveTab(newValue);
-  };
-
   return (
-    <Box sx={{ flexGrow: 1 }}>
-      <AppBar position="static">
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Фитнес-приложение
-          </Typography>
-        </Toolbar>
-      </AppBar>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
+        <Router>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/login" element={<LoginForm />} />
+            <Route path="/register" element={<RegisterForm />} />
 
-      <Container maxWidth="xl">
-        <Box sx={{ borderBottom: 1, borderColor: "divider", mt: 2 }}>
-          <Tabs value={activeTab} onChange={handleTabChange}>
-            <Tab label="Тренеры и клиенты" />
-            <Tab label="Тренировки" />
-            <Tab label="Упражнения" />
-            <Tab label="Метрики здоровья" />
-            <Tab label="Дневники" />
-          </Tabs>
-        </Box>
+            {/* Root route - redirect to trainers-clients if authenticated, otherwise to login */}
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Navigate to="/trainers-clients" replace />
+                </ProtectedRoute>
+              }
+            />
 
-        <TabPanel value={activeTab} index={0}>
-          <TrainerClientSection />
-        </TabPanel>
-        <TabPanel value={activeTab} index={1}>
-          <TrainingSection />
-        </TabPanel>
-        <TabPanel value={activeTab} index={2}>
-          <ExercisesSection />
-        </TabPanel>
-        <TabPanel value={activeTab} index={3}>
-          <HealthMetricsSection />
-        </TabPanel>
-        <TabPanel value={activeTab} index={4}>
-          <DiarySection />
-        </TabPanel>
-      </Container>
-    </Box>
+            {/* Protected routes */}
+            <Route
+              path="/trainers-clients"
+              element={
+                <ProtectedRoute>
+                  <ProtectedLayout>
+                    <TrainersAndClients />
+                  </ProtectedLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/training"
+              element={
+                <ProtectedRoute>
+                  <ProtectedLayout>
+                    <TrainingSection />
+                  </ProtectedLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/exercises"
+              element={
+                <ProtectedRoute>
+                  <ProtectedLayout>
+                    <ExercisesSection />
+                  </ProtectedLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/health"
+              element={
+                <ProtectedRoute>
+                  <ProtectedLayout>
+                    <HealthMetricsSection />
+                  </ProtectedLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/diary"
+              element={
+                <ProtectedRoute>
+                  <ProtectedLayout>
+                    <DiarySection />
+                  </ProtectedLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Redirect to login if no route matches */}
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </Router>
+      </LocalizationProvider>
+    </ThemeProvider>
   );
 }
 

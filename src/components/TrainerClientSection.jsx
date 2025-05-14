@@ -13,6 +13,7 @@ import {
   Divider,
   Chip,
 } from '@mui/material';
+import { API_URL } from '../config';
 
 const TrainerClientSection = () => {
   const [clientId, setClientId] = useState('');
@@ -23,7 +24,7 @@ const TrainerClientSection = () => {
   const fetchClientTrainers = async () => {
     try {
       console.log('Fetching trainers for client:', clientId);
-      const response = await fetch(`http://localhost:8000/clients/${clientId}/trainers`);
+      const response = await fetch(`${API_URL}/clients/${clientId}/trainers`);
       const data = await response.json();
       console.log('API Response:', data);
       
@@ -40,7 +41,7 @@ const TrainerClientSection = () => {
   const fetchTrainerClients = async () => {
     try {
       console.log('Fetching clients for trainer:', trainerId);
-      const response = await fetch(`http://localhost:8000/trainers/${trainerId}/clients`);
+      const response = await fetch(`${API_URL}/trainers/${trainerId}/clients`);
       const data = await response.json();
       console.log('API Response for clients:', data);
       

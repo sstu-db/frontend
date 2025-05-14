@@ -1,205 +1,350 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Card,
   CardContent,
   Typography,
-  TextField,
   Button,
   Grid,
-  List,
-  ListItem,
-  ListItemText,
-  LinearProgress,
+  Paper,
+  IconButton,
+  TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  InputLabel,
+  Input,
+  InputAdornment,
 } from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
+import { healthService } from '../services/healthService';
+import { format } from 'date-fns';
+import { ru } from 'date-fns/locale';
 
 const HealthMetricsSection = () => {
-  const [userId, setUserId] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(new Date());
+  const [endDate, setEndDate] = useState(new Date());
   const [steps, setSteps] = useState([]);
   const [water, setWater] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const fetchHealthMetrics = async () => {
+  // Dialog states
+  const [openStepsDialog, setOpenStepsDialog] = useState(false);
+  const [openWaterDialog, setOpenWaterDialog] = useState(false);
+  const [newSteps, setNewSteps] = useState({
+    колво: '',
+    целевое_колво: '',
+    дата: new Date()
+  });
+  const [newWater, setNewWater] = useState({
+    объем: '',
+    целевой_объем: '',
+    дата: new Date()
+  });
+
+  useEffect(() => {
+    fetchHealthData();
+  }, [startDate, endDate]);
+
+  const fetchHealthData = async () => {
     try {
-      console.log('Fetching health metrics for user:', userId);
+      setLoading(true);
+      setError(null);
       
-      // Form URLs with date parameters
-      let stepsUrl = `http://localhost:8000/steps?user_id=${userId}`;
-      let waterUrl = `http://localhost:8000/water?user_id=${userId}`;
+      // Format dates as YYYY-MM-DD
+      const formattedStartDate = format(startDate, 'yyyy-MM-dd');
+      const formattedEndDate = format(endDate, 'yyyy-MM-dd');
       
-      if (startDate) {
-        stepsUrl += `&start_date=${startDate}`;
-        waterUrl += `&start_date=${startDate}`;
-      }
-      if (endDate) {
-        stepsUrl += `&end_date=${endDate}`;
-        waterUrl += `&end_date=${endDate}`;
-      }
+      const [stepsData, waterData] = await Promise.all([
+        healthService.getMyStepsByDates(formattedStartDate, formattedEndDate),
+        healthService.getMyWaterByDates(formattedStartDate, formattedEndDate)
+      ]);
       
-      // Get steps data
-      const stepsResponse = await fetch(stepsUrl);
-      const stepsData = await stepsResponse.json();
-      console.log('Steps API Response:', stepsData);
-      
-      // Get water consumption data
-      const waterResponse = await fetch(waterUrl);
-      const waterData = await waterResponse.json();
-      console.log('Water API Response:', waterData);
-      
-      setSteps(stepsData.data || []);
-      setWater(waterData.data || []);
+      // Ensure we have arrays even if the API returns null or undefined
+      setSteps(Array.isArray(stepsData) ? stepsData : []);
+      setWater(Array.isArray(waterData) ? waterData : []);
     } catch (error) {
-      console.error('Error fetching health metrics:', error);
+      console.error('Error fetching health data:', error);
+      setError('Ошибка при загрузке данных о здоровье');
+      // Reset data on error
       setSteps([]);
       setWater([]);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return 'Не указана';
+  const handleDeleteSteps = async (stepsId) => {
     try {
-      const date = new Date(dateStr);
-      return date.toLocaleDateString('ru-RU', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
+      await healthService.deleteSteps(stepsId);
+      fetchHealthData();
     } catch (error) {
-      console.error('Error formatting date:', error);
-      return dateStr;
+      console.error('Error deleting steps:', error);
+      setError('Ошибка при удалении записи о шагах');
+    }
+  };
+
+  const handleDeleteWater = async (waterId) => {
+    try {
+      await healthService.deleteWater(waterId);
+      fetchHealthData();
+    } catch (error) {
+      console.error('Error deleting water:', error);
+      setError('Ошибка при удалении записи о воде');
+    }
+  };
+
+  const handleCreateSteps = async () => {
+    try {
+      const stepsData = {
+        ...newSteps,
+        дата: format(newSteps.дата, 'yyyy-MM-dd')
+      };
+      await healthService.createSteps(stepsData);
+      setOpenStepsDialog(false);
+      setNewSteps({
+        колво: '',
+        целевое_колво: '',
+        дата: new Date()
+      });
+      fetchHealthData();
+    } catch (error) {
+      console.error('Error creating steps:', error);
+      setError('Ошибка при создании записи о шагах');
+    }
+  };
+
+  const handleCreateWater = async () => {
+    try {
+      const waterData = {
+        ...newWater,
+        дата: format(newWater.дата, 'yyyy-MM-dd')
+      };
+      await healthService.createWater(waterData);
+      setOpenWaterDialog(false);
+      setNewWater({
+        объем: '',
+        целевой_объем: '',
+        дата: new Date()
+      });
+      fetchHealthData();
+    } catch (error) {
+      console.error('Error creating water:', error);
+      setError('Ошибка при создании записи о воде');
     }
   };
 
   return (
     <Box sx={{ p: 3 }}>
+      {error && (
+        <Typography color="error" sx={{ mb: 2 }}>
+          {error}
+        </Typography>
+      )}
+
       <Grid container spacing={3}>
         <Grid item xs={12}>
           <Card>
             <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Поиск метрик здоровья
-              </Typography>
-              <Grid container spacing={2} sx={{ mb: 2 }}>
-                <Grid item xs={12} sm={4}>
-                  <TextField
-                    label="ID пользователя"
-                    value={userId}
-                    onChange={(e) => setUserId(e.target.value)}
-                    type="number"
-                    fullWidth
-                  />
+              <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+                <DatePicker
+                  label="Начальная дата"
+                  value={startDate}
+                  onChange={(newValue) => setStartDate(newValue)}
+                  format="dd.MM.yyyy"
+                  slotProps={{ textField: { fullWidth: true } }}
+                />
+                <DatePicker
+                  label="Конечная дата"
+                  value={endDate}
+                  onChange={(newValue) => setEndDate(newValue)}
+                  format="dd.MM.yyyy"
+                  slotProps={{ textField: { fullWidth: true } }}
+                />
+              </Box>
+
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="h6">
+                      Шаги
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      startIcon={<AddIcon />}
+                      onClick={() => setOpenStepsDialog(true)}
+                    >
+                      Добавить
+                    </Button>
+                  </Box>
+                  {loading ? (
+                    <Typography>Загрузка...</Typography>
+                  ) : steps.length > 0 ? (
+                    steps.map((step) => (
+                      <Paper key={step.id} sx={{ p: 2, mb: 2 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Box>
+                            <Typography variant="subtitle1">
+                              {format(new Date(step.дата), 'd MMMM yyyy', { locale: ru })}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Шагов: {step.колво}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Цель: {step.целевое_колво}
+                            </Typography>
+                          </Box>
+                          <IconButton
+                            color="error"
+                            onClick={() => handleDeleteSteps(step.id)}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Box>
+                      </Paper>
+                    ))
+                  ) : (
+                    <Typography color="text.secondary">
+                      Нет записей о шагах
+                    </Typography>
+                  )}
                 </Grid>
-                <Grid item xs={12} sm={4}>
-                  <TextField
-                    label="Начальная дата"
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    fullWidth
-                    InputLabelProps={{ shrink: true }}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <TextField
-                    label="Конечная дата"
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    fullWidth
-                    InputLabelProps={{ shrink: true }}
-                  />
+
+                <Grid item xs={12} md={6}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="h6">
+                      Вода
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      startIcon={<AddIcon />}
+                      onClick={() => setOpenWaterDialog(true)}
+                    >
+                      Добавить
+                    </Button>
+                  </Box>
+                  {loading ? (
+                    <Typography>Загрузка...</Typography>
+                  ) : water.length > 0 ? (
+                    water.map((waterRecord) => (
+                      <Paper key={waterRecord.id} sx={{ p: 2, mb: 2 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Box>
+                            <Typography variant="subtitle1">
+                              {format(new Date(waterRecord.дата), 'd MMMM yyyy', { locale: ru })}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Объем: {waterRecord.объем} мл
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Цель: {waterRecord.целевой_объем} мл
+                            </Typography>
+                          </Box>
+                          <IconButton
+                            color="error"
+                            onClick={() => handleDeleteWater(waterRecord.id)}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Box>
+                      </Paper>
+                    ))
+                  ) : (
+                    <Typography color="text.secondary">
+                      Нет записей о воде
+                    </Typography>
+                  )}
                 </Grid>
               </Grid>
-              <Button variant="contained" onClick={fetchHealthMetrics}>
-                Найти метрики
-              </Button>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Шаги
-              </Typography>
-              <List>
-                {steps && steps.length > 0 ? (
-                  steps.map((step, index) => (
-                    <ListItem key={index}>
-                      <Box sx={{ width: '100%' }}>
-                        <ListItemText 
-                          primary={formatDate(step.дата)}
-                          secondary={
-                            <>
-                              <Typography component="span" variant="body2">
-                                Пройдено: {step.колво} / {step.целевое_колво} шагов
-                              </Typography>
-                              <Box sx={{ mt: 1 }}>
-                                <LinearProgress 
-                                  variant="determinate" 
-                                  value={(step.колво / step.целевое_колво) * 100}
-                                  sx={{ height: 8, borderRadius: 4 }}
-                                />
-                              </Box>
-                            </>
-                          }
-                        />
-                      </Box>
-                    </ListItem>
-                  ))
-                ) : (
-                  <Typography color="text.secondary">
-                    Нет данных о шагах
-                  </Typography>
-                )}
-              </List>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Потребление воды
-              </Typography>
-              <List>
-                {water && water.length > 0 ? (
-                  water.map((waterEntry, index) => (
-                    <ListItem key={index}>
-                      <Box sx={{ width: '100%' }}>
-                        <ListItemText 
-                          primary={formatDate(waterEntry.дата)}
-                          secondary={
-                            <>
-                              <Typography component="span" variant="body2">
-                                Выпито: {waterEntry.объем} / {waterEntry.целевой_объем} мл
-                              </Typography>
-                              <Box sx={{ mt: 1 }}>
-                                <LinearProgress 
-                                  variant="determinate" 
-                                  value={(waterEntry.объем / waterEntry.целевой_объем) * 100}
-                                  sx={{ height: 8, borderRadius: 4 }}
-                                />
-                              </Box>
-                            </>
-                          }
-                        />
-                      </Box>
-                    </ListItem>
-                  ))
-                ) : (
-                  <Typography color="text.secondary">
-                    Нет данных о потреблении воды
-                  </Typography>
-                )}
-              </List>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
+
+      {/* Dialog for adding new steps */}
+      <Dialog open={openStepsDialog} onClose={() => setOpenStepsDialog(false)}>
+        <DialogTitle>Добавить шаги</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+            <DatePicker
+              label="Дата"
+              value={newSteps.дата}
+              onChange={(newValue) => setNewSteps({ ...newSteps, дата: newValue })}
+              format="dd.MM.yyyy"
+              slotProps={{ textField: { fullWidth: true } }}
+            />
+            <FormControl fullWidth>
+              <InputLabel>Количество шагов</InputLabel>
+              <Input
+                type="number"
+                value={newSteps.колво}
+                onChange={(e) => setNewSteps({ ...newSteps, колво: e.target.value })}
+                endAdornment={<InputAdornment position="end">шагов</InputAdornment>}
+              />
+            </FormControl>
+            <FormControl fullWidth>
+              <InputLabel>Целевое количество шагов</InputLabel>
+              <Input
+                type="number"
+                value={newSteps.целевое_колво}
+                onChange={(e) => setNewSteps({ ...newSteps, целевое_колво: e.target.value })}
+                endAdornment={<InputAdornment position="end">шагов</InputAdornment>}
+              />
+            </FormControl>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenStepsDialog(false)}>Отмена</Button>
+          <Button onClick={handleCreateSteps} variant="contained">
+            Добавить
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog for adding new water */}
+      <Dialog open={openWaterDialog} onClose={() => setOpenWaterDialog(false)}>
+        <DialogTitle>Добавить воду</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+            <DatePicker
+              label="Дата"
+              value={newWater.дата}
+              onChange={(newValue) => setNewWater({ ...newWater, дата: newValue })}
+              format="dd.MM.yyyy"
+              slotProps={{ textField: { fullWidth: true } }}
+            />
+            <FormControl fullWidth>
+              <InputLabel>Объем воды</InputLabel>
+              <Input
+                type="number"
+                value={newWater.объем}
+                onChange={(e) => setNewWater({ ...newWater, объем: e.target.value })}
+                endAdornment={<InputAdornment position="end">мл</InputAdornment>}
+              />
+            </FormControl>
+            <FormControl fullWidth>
+              <InputLabel>Целевой объем воды</InputLabel>
+              <Input
+                type="number"
+                value={newWater.целевой_объем}
+                onChange={(e) => setNewWater({ ...newWater, целевой_объем: e.target.value })}
+                endAdornment={<InputAdornment position="end">мл</InputAdornment>}
+              />
+            </FormControl>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenWaterDialog(false)}>Отмена</Button>
+          <Button onClick={handleCreateWater} variant="contained">
+            Добавить
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

@@ -1,94 +1,232 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Card,
   CardContent,
   Typography,
-  TextField,
   Button,
   Grid,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Alert,
 } from '@mui/material';
-import ExerciseList from './ExerciseList';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
+import { trainingService } from '../services/trainingService';
+import ExerciseCard from './ExerciseCard';
 
 const ExercisesSection = () => {
-  const [clientId, setClientId] = useState('');
-  const [trainerId, setTrainerId] = useState('');
   const [exercises, setExercises] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [exerciseTypes, setExerciseTypes] = useState([]);
+  const [difficultyLevels, setDifficultyLevels] = useState([]);
+  const [newExercise, setNewExercise] = useState({
+    название: '',
+    описание: '',
+    тип_упражнения_id: '',
+    сложность_упражнения_id: '',
+  });
+
+  useEffect(() => {
+    fetchExercises();
+    fetchExerciseTypes();
+    fetchDifficultyLevels();
+  }, []);
 
   const fetchExercises = async () => {
     try {
-      console.log('Fetching exercises for client:', clientId, 'trainer:', trainerId);
-      let url = 'http://localhost:8000/exercises?';
-      
-      if (clientId) {
-        url += `client_id=${clientId}&`;
-      }
-      if (trainerId) {
-        url += `trainer_id=${trainerId}&`;
-      }
-
-      const response = await fetch(url);
-      const data = await response.json();
-      console.log('Exercises API Response:', data);
-      
-      if (data.data && Array.isArray(data.data)) {
-        setExercises(data.data);
-      } else {
-        setExercises([]);
-      }
+      setLoading(true);
+      setError(null);
+      const data = await trainingService.getMyExercises();
+      setExercises(data);
     } catch (error) {
       console.error('Error fetching exercises:', error);
-      setExercises([]);
+      setError('Ошибка при загрузке упражнений');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchExerciseTypes = async () => {
+    try {
+      const data = await trainingService.getExerciseTypes();
+      setExerciseTypes(data);
+    } catch (error) {
+      console.error('Error fetching exercise types:', error);
+      setError('Ошибка при загрузке типов упражнений');
+    }
+  };
+
+  const fetchDifficultyLevels = async () => {
+    try {
+      const data = await trainingService.getExerciseDifficultyLevels();
+      setDifficultyLevels(data);
+    } catch (error) {
+      console.error('Error fetching difficulty levels:', error);
+      setError('Ошибка при загрузке уровней сложности');
+    }
+  };
+
+  const handleOpenDialog = () => {
+    setNewExercise({
+      название: '',
+      описание: '',
+      тип_упражнения_id: '',
+      сложность_упражнения_id: '',
+    });
+    setOpenDialog(true);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+    setError(null);
+  };
+
+  const handleCreateExercise = async () => {
+    try {
+      setError(null);
+      await trainingService.createExercise(newExercise);
+      handleCloseDialog();
+      fetchExercises();
+    } catch (error) {
+      console.error('Error creating exercise:', error);
+      setError('Ошибка при создании упражнения');
+    }
+  };
+
+  const handleDeleteExercise = async (exerciseId) => {
+    try {
+      await trainingService.deleteExercise(exerciseId);
+      fetchExercises();
+    } catch (error) {
+      console.error('Error deleting exercise:', error);
+      setError('Ошибка при удалении упражнения');
     }
   };
 
   return (
     <Box sx={{ p: 3 }}>
-      <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Поиск упражнений
-              </Typography>
-              <Grid container spacing={2} sx={{ mb: 2 }}>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    label="ID клиента"
-                    value={clientId}
-                    onChange={(e) => setClientId(e.target.value)}
-                    type="number"
-                    fullWidth
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    label="ID тренера"
-                    value={trainerId}
-                    onChange={(e) => setTrainerId(e.target.value)}
-                    type="number"
-                    fullWidth
-                  />
-                </Grid>
-              </Grid>
-              <Button variant="contained" onClick={fetchExercises}>
-                Найти упражнения
-              </Button>
-            </CardContent>
-          </Card>
-        </Grid>
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+          {error}
+        </Alert>
+      )}
 
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Упражнения
-              </Typography>
-              <ExerciseList exercises={exercises} />
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+      <Card>
+        <CardContent>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6">
+              Упражнения
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleOpenDialog}
+            >
+              Добавить упражнение
+            </Button>
+          </Box>
+
+          {loading ? (
+            <Typography>Загрузка...</Typography>
+          ) : exercises && exercises.length > 0 ? (
+            <Grid container spacing={2}>
+              {exercises.map((exercise) => (
+                <Grid item xs={12} sm={6} md={4} key={exercise.id}>
+                  <Box sx={{ position: 'relative' }}>
+                    <ExerciseCard exercise={exercise} />
+                    <IconButton
+                      color="error"
+                      onClick={() => handleDeleteExercise(exercise.id)}
+                      sx={{
+                        position: 'absolute',
+                        top: 8,
+                        right: 8,
+                        backgroundColor: 'background.paper',
+                        '&:hover': {
+                          backgroundColor: 'action.hover',
+                        },
+                      }}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Box>
+                </Grid>
+              ))}
+            </Grid>
+          ) : (
+            <Typography color="text.secondary">
+              Нет доступных упражнений
+            </Typography>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={openDialog} onClose={handleCloseDialog}>
+        <DialogTitle>Добавить упражнение</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            <TextField
+              label="Название"
+              value={newExercise.название}
+              onChange={(e) => setNewExercise({ ...newExercise, название: e.target.value })}
+              fullWidth
+            />
+            <TextField
+              label="Описание"
+              value={newExercise.описание}
+              onChange={(e) => setNewExercise({ ...newExercise, описание: e.target.value })}
+              multiline
+              rows={4}
+              fullWidth
+            />
+            <FormControl fullWidth>
+              <InputLabel>Тип упражнения</InputLabel>
+              <Select
+                value={newExercise.тип_упражнения_id}
+                onChange={(e) => setNewExercise({ ...newExercise, тип_упражнения_id: e.target.value })}
+                label="Тип упражнения"
+              >
+                {exerciseTypes.map((type) => (
+                  <MenuItem key={type.id} value={type.id}>
+                    {type.название}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth>
+              <InputLabel>Уровень сложности</InputLabel>
+              <Select
+                value={newExercise.сложность_упражнения_id}
+                onChange={(e) => setNewExercise({ ...newExercise, сложность_упражнения_id: e.target.value })}
+                label="Уровень сложности"
+              >
+                {difficultyLevels.map((level) => (
+                  <MenuItem key={level.id} value={level.id}>
+                    {level.название}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>Отмена</Button>
+          <Button onClick={handleCreateExercise} variant="contained">
+            Создать
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

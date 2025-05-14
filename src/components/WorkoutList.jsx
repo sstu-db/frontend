@@ -1,37 +1,10 @@
 import {
-  List,
-  ListItem,
-  ListItemText,
-  Typography,
   Box,
-  Chip,
-  Paper,
-  Divider,
+  Typography,
 } from '@mui/material';
-import ExerciseList from './ExerciseList';
+import TrainingCard from './TrainingCard';
 
-const formatDateTime = (dateStr) => {
-  if (!dateStr) return 'Не указано';
-  try {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('ru-RU', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  } catch (error) {
-    console.error('Error formatting date:', error);
-    return dateStr;
-  }
-};
-
-const getWorkoutFormat = (isOnline) => {
-  return isOnline ? 'Онлайн' : 'Оффлайн';
-};
-
-const WorkoutList = ({ workouts }) => {
+const WorkoutList = ({ workouts, onDelete, showExercises = true }) => {
   if (!workouts || workouts.length === 0) {
     return (
       <Typography color="text.secondary">
@@ -41,43 +14,16 @@ const WorkoutList = ({ workouts }) => {
   }
 
   return (
-    <List>
-      {workouts.map((workout, index) => (
-        <ListItem key={index}>
-          <Paper sx={{ width: '100%', p: 2 }}>
-            <ListItemText
-              primary={workout.название || 'Без названия'}
-              secondary={
-                <>
-                  <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                    <Chip
-                      label={`Формат: ${getWorkoutFormat(workout.является_онлайн)}`}
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                    />
-                    <Chip
-                      label={`Время: ${formatDateTime(workout.время_начала)}`}
-                      size="small"
-                      color="secondary"
-                      variant="outlined"
-                    />
-                  </Box>
-                  {workout.exercises && workout.exercises.length > 0 && (
-                    <Box sx={{ mt: 2 }}>
-                      <Typography variant="subtitle2" gutterBottom>
-                        Упражнения:
-                      </Typography>
-                      <ExerciseList exercises={workout.exercises} />
-                    </Box>
-                  )}
-                </>
-              }
-            />
-          </Paper>
-        </ListItem>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {workouts.map((workout) => (
+        <TrainingCard
+          key={workout.id}
+          item={workout}
+          onDelete={onDelete}
+          showWorkouts={showExercises}
+        />
       ))}
-    </List>
+    </Box>
   );
 };
 

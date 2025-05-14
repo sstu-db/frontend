@@ -1,185 +1,147 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
-  Card,
-  CardContent,
   Typography,
-  TextField,
   Button,
-  Grid,
-  Paper,
+  CircularProgress,
+  Alert,
+  Stack,
 } from '@mui/material';
+import { Add as AddIcon } from '@mui/icons-material';
+import { trainingService } from '../services/trainingService';
+import CreateWorkoutDialog from './CreateWorkoutDialog';
+import CreateTrainingPlanDialog from './CreateTrainingPlanDialog';
 import WorkoutList from './WorkoutList';
 
-// Function for formatting date and time
-const formatDateTime = (dateTimeStr) => {
-  if (!dateTimeStr) return 'Не указано';
-  try {
-    const date = new Date(dateTimeStr);
-    return date.toLocaleString('ru-RU', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  } catch (error) {
-    console.error('Error formatting date:', error);
-    return dateTimeStr;
-  }
-};
-
-// Function for determining workout format
-const getWorkoutFormat = (isOnline) => {
-  return isOnline ? 'Онлайн' : 'Оффлайн';
-};
-
 const TrainingSection = () => {
-  const [clientId, setClientId] = useState('');
-  const [trainerId, setTrainerId] = useState('');
   const [trainingPlans, setTrainingPlans] = useState([]);
   const [workouts, setWorkouts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [createWorkoutOpen, setCreateWorkoutOpen] = useState(false);
+  const [createPlanOpen, setCreatePlanOpen] = useState(false);
 
-  const fetchTrainingPlans = async () => {
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
     try {
-      console.log('Fetching training plans for client:', clientId, 'trainer:', trainerId);
-      let url = 'http://localhost:8000/training-plans?';
-      
-      if (clientId) {
-        url += `client_id=${clientId}&`;
-      }
-      if (trainerId) {
-        url += `trainer_id=${trainerId}&`;
-      }
-
-      const response = await fetch(url);
-      const data = await response.json();
-      console.log('Training Plans API Response:', data);
-      
-      if (data.data && Array.isArray(data.data)) {
-        setTrainingPlans(data.data);
-      } else {
-        setTrainingPlans([]);
-      }
+      setLoading(true);
+      setError(null);
+      const [plansData, workoutsData] = await Promise.all([
+        trainingService.getMyTrainingPlans(),
+        trainingService.getMyWorkouts(),
+      ]);
+      setTrainingPlans(plansData);
+      setWorkouts(workoutsData);
     } catch (error) {
-      console.error('Error fetching training plans:', error);
-      setTrainingPlans([]);
+      console.error('Error fetching data:', error);
+      setError('Ошибка при загрузке данных');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const fetchWorkouts = async () => {
+  const handleDeletePlan = async (planId) => {
     try {
-      console.log('Fetching workouts for client:', clientId, 'trainer:', trainerId);
-      let url = 'http://localhost:8000/workouts?';
-      
-      if (clientId) {
-        url += `client_id=${clientId}&`;
-      }
-      if (trainerId) {
-        url += `trainer_id=${trainerId}&`;
-      }
-
-      const response = await fetch(url);
-      const data = await response.json();
-      console.log('Workouts API Response:', data);
-      
-      if (data.data && Array.isArray(data.data)) {
-        setWorkouts(data.data);
-      } else {
-        setWorkouts([]);
-      }
+      await trainingService.deleteTrainingPlan(planId);
+      fetchData();
     } catch (error) {
-      console.error('Error fetching workouts:', error);
-      setWorkouts([]);
+      console.error('Error deleting training plan:', error);
+      setError('Ошибка при удалении плана тренировок');
     }
   };
+
+  const handleDeleteWorkout = async (workoutId) => {
+    try {
+      await trainingService.deleteWorkout(workoutId);
+      fetchData();
+    } catch (error) {
+      console.error('Error deleting workout:', error);
+      setError('Ошибка при удалении тренировки');
+    }
+  };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error">{error}</Alert>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 3 }}>
-      <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Поиск тренировок
-              </Typography>
-              <Grid container spacing={2} sx={{ mb: 2 }}>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    label="ID клиента"
-                    value={clientId}
-                    onChange={(e) => setClientId(e.target.value)}
-                    type="number"
-                    fullWidth
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    label="ID тренера"
-                    value={trainerId}
-                    onChange={(e) => setTrainerId(e.target.value)}
-                    type="number"
-                    fullWidth
-                  />
-                </Grid>
-              </Grid>
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <Button variant="contained" onClick={fetchTrainingPlans}>
-                  Найти планы тренировок
-                </Button>
-                <Button variant="contained" onClick={fetchWorkouts}>
-                  Найти тренировки
-                </Button>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
+      <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => setCreateWorkoutOpen(true)}
+        >
+          Добавить тренировку
+        </Button>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => setCreatePlanOpen(true)}
+        >
+          Добавить план тренировок
+        </Button>
+      </Stack>
 
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Планы тренировок
+      <Typography variant="h5" sx={{ mb: 2 }}>
+        Мои тренировки
+      </Typography>
+      <WorkoutList workouts={workouts} onDelete={handleDeleteWorkout} showExercises={true} />
+
+      <Typography variant="h5" sx={{ mt: 4, mb: 2 }}>
+        Мои планы тренировок
+      </Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {trainingPlans.length > 0 ? (
+          trainingPlans.map((plan) => (
+            <Box key={plan.id} sx={{ mb: 2 }}>
+              <Typography variant="h6">{plan.название}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                {plan.описание}
               </Typography>
-              {trainingPlans && trainingPlans.length > 0 ? (
-                trainingPlans.map((plan, index) => (
-                  <Paper key={index} sx={{ p: 2, mb: 2 }}>
-                    <Typography variant="h6" gutterBottom>
-                      {plan.название || 'Без названия'}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" paragraph>
-                      {plan.описание || ''}
-                    </Typography>
-                    {plan.workouts && plan.workouts.length > 0 && (
-                      <Box sx={{ mt: 2 }}>
-                        <Typography variant="subtitle1" gutterBottom>
-                          Тренировки:
-                        </Typography>
-                        <WorkoutList workouts={plan.workouts} />
-                      </Box>
-                    )}
-                  </Paper>
-                ))
-              ) : (
-                <Typography color="text.secondary">
-                  Нет доступных планов тренировок
-                </Typography>
+              {plan.workouts && plan.workouts.length > 0 && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Тренировки в плане:
+                  </Typography>
+                  <WorkoutList workouts={plan.workouts} showExercises={true} />
+                </Box>
               )}
-            </CardContent>
-          </Card>
-        </Grid>
+            </Box>
+          ))
+        ) : (
+          <Typography color="text.secondary">
+            У вас пока нет планов тренировок
+          </Typography>
+        )}
+      </Box>
 
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Тренировки
-              </Typography>
-              <WorkoutList workouts={workouts} />
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+      <CreateWorkoutDialog
+        open={createWorkoutOpen}
+        onClose={() => setCreateWorkoutOpen(false)}
+        onSuccess={fetchData}
+      />
+
+      <CreateTrainingPlanDialog
+        open={createPlanOpen}
+        onClose={() => setCreatePlanOpen(false)}
+        onSuccess={fetchData}
+      />
     </Box>
   );
 };
